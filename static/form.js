@@ -133,4 +133,16 @@ function deleteItem(itemId) {
 }
 
 // Init
+document.getElementById('btn-take-photo').addEventListener('click', () => {
+    document.getElementById('input-camera').click();
+});
+document.getElementById('btn-choose-file').addEventListener('click', () => {
+    document.getElementById('input-file').click();
+});
+document.getElementById('input-camera').addEventListener('change', function () {
+    handlePhotoCapture(this);
+});
+document.getElementById('input-file').addEventListener('change', function () {
+    handlePhotoCapture(this);
+});
 updateStagedInput();
