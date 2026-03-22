@@ -132,8 +132,8 @@ function deleteItem(itemId) {
     }
 }
 
-// Init
-document.addEventListener('DOMContentLoaded', () => {
+// Init — script loads after the form, so DOM is already ready
+(function init() {
     const btnTake = document.getElementById('btn-take-photo');
     const btnChoose = document.getElementById('btn-choose-file');
     const inputCamera = document.getElementById('input-camera');
@@ -148,4 +148,4 @@ document.addEventListener('DOMContentLoaded', () => {
         inputFile.addEventListener('change', function () { handlePhotoCapture(this); });
     }
     updateStagedInput();
-});
+})();
