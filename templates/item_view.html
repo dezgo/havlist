@@ -87,8 +87,11 @@ const counter = document.getElementById('lb-counter');
 const totalSlides = {{ photos|length }};
 let currentSlide = 0;
 let touchStartX = 0;
+let touchStartY = 0;
 let touchDeltaX = 0;
+let touchDeltaY = 0;
 let isDragging = false;
+let swipeAxis = null; // 'x' or 'y' — lock after first move
 
 function openLightbox(idx) {
     currentSlide = idx;
@@ -142,7 +145,10 @@ function updateNav() {
 // to stop the browser's back/forward swipe gesture
 track.addEventListener('touchstart', (e) => {
     touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
     touchDeltaX = 0;
+    touchDeltaY = 0;
+    swipeAxis = null;
     isDragging = true;
     track.style.transition = 'none';
 }, { passive: true });
@@ -150,15 +156,53 @@ track.addEventListener('touchstart', (e) => {
 track.addEventListener('touchmove', (e) => {
     if (!isDragging) return;
     touchDeltaX = e.touches[0].clientX - touchStartX;
+    touchDeltaY = e.touches[0].clientY - touchStartY;
     e.preventDefault();
-    const offset = -(currentSlide * window.innerWidth) + touchDeltaX;
-    track.style.transform = `translateX(${offset}px)`;
+
+    // Lock axis after 10px of movement
+    if (!swipeAxis && (Math.abs(touchDeltaX) > 10 || Math.abs(touchDeltaY) > 10)) {
+        swipeAxis = Math.abs(touchDeltaX) > Math.abs(touchDeltaY) ? 'x' : 'y';
+    }
+
+    if (swipeAxis === 'y') {
+        // Vertical drag — move lightbox content down, scale slightly for iOS feel
+        const dy = Math.max(0, touchDeltaY);
+        const scale = Math.max(0.9, 1 - dy / 1000);
+        const opacity = Math.max(0.3, 1 - dy / 400);
+        track.style.transform = `translateX(-${currentSlide * 100}%) translateY(${dy}px) scale(${scale})`;
+        lightbox.style.background = `rgba(0,0,0,${opacity * 0.95})`;
+    } else {
+        const offset = -(currentSlide * window.innerWidth) + touchDeltaX;
+        track.style.transform = `translateX(${offset}px)`;
+    }
 }, { passive: false });
 
 track.addEventListener('touchend', () => {
     if (!isDragging) return;
     isDragging = false;
-    if (Math.abs(touchDeltaX) > 50) {
+
+    if (swipeAxis === 'y' && touchDeltaY > 100) {
+        // Dismiss
+        track.style.transition = 'transform 0.2s ease';
+        track.style.transform = `translateX(-${currentSlide * 100}%) translateY(100vh)`;
+        lightbox.style.transition = 'background 0.2s ease';
+        lightbox.style.background = 'rgba(0,0,0,0)';
+        setTimeout(() => {
+            lightbox.classList.remove('active');
+            document.body.style.overflow = '';
+            track.style.transition = '';
+            track.style.transform = '';
+            lightbox.style.transition = '';
+            lightbox.style.background = '';
+        }, 200);
+    } else if (swipeAxis === 'y') {
+        // Snap back
+        track.style.transition = 'transform 0.2s ease';
+        track.style.transform = `translateX(-${currentSlide * 100}%)`;
+        lightbox.style.transition = 'background 0.2s ease';
+        lightbox.style.background = '';
+        setTimeout(() => { track.style.transition = ''; lightbox.style.transition = ''; }, 200);
+    } else if (Math.abs(touchDeltaX) > 50) {
         goTo(currentSlide + (touchDeltaX < 0 ? 1 : -1));
     } else {
         updateSlide(true);
