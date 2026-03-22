@@ -20,9 +20,35 @@ function addPhotoThumb(filename, url) {
     grid.appendChild(div);
 }
 
+function compressImage(file, maxDim = 1920, quality = 0.8) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+            let { width, height } = img;
+            if (width > maxDim || height > maxDim) {
+                const ratio = Math.min(maxDim / width, maxDim / height);
+                width = Math.round(width * ratio);
+                height = Math.round(height * ratio);
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+            canvas.toBlob(
+                (blob) => blob ? resolve(blob) : reject(new Error('Compression failed')),
+                'image/jpeg',
+                quality
+            );
+        };
+        img.onerror = () => reject(new Error('Failed to load image'));
+        img.src = URL.createObjectURL(file);
+    });
+}
+
 async function uploadFile(file) {
+    const compressed = await compressImage(file);
     const form = new FormData();
-    form.append('photo', file);
+    form.append('photo', compressed, 'photo.jpg');
     const res = await fetch('/api/photos/upload', { method: 'POST', body: form });
     if (!res.ok) {
         const text = await res.text();
@@ -36,7 +62,7 @@ async function handlePhotoCapture(input) {
     const status = document.getElementById('ai-status');
     for (const file of input.files) {
         try {
-            status.textContent = 'Uploading...';
+            status.textContent = 'Compressing...';
             const data = await uploadFile(file);
             stagedPhotos.push(data.filename);
             addPhotoThumb(data.filename, data.url);
