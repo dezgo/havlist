@@ -24,7 +24,10 @@ async function uploadFile(file) {
     const form = new FormData();
     form.append('photo', file);
     const res = await fetch('/api/photos/upload', { method: 'POST', body: form });
-    if (!res.ok) throw new Error('Upload failed');
+    if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Upload failed (${res.status}): ${text.substring(0, 200)}`);
+    }
     return res.json();
 }
 
