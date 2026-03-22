@@ -24,10 +24,16 @@
             {% endif %}
         </div>
         <div class="photo-actions">
-            <button type="button" class="btn btn-secondary" id="btn-take-photo">Take Photo</button>
-            <button type="button" class="btn btn-secondary" id="btn-choose-file">Choose File</button>
-            <input type="file" accept="image/*" capture="environment" id="input-camera" style="display:none">
-            <input type="file" accept="image/*" multiple id="input-file" style="display:none">
+            <label class="btn btn-secondary">
+                Take Photo
+                <input type="file" accept="image/*" capture="environment"
+                       onchange="handlePhotoCapture(this)" style="position:absolute;width:0;height:0;overflow:hidden;opacity:0">
+            </label>
+            <label class="btn btn-secondary">
+                Choose File
+                <input type="file" accept="image/*" multiple
+                       onchange="handlePhotoCapture(this)" style="position:absolute;width:0;height:0;overflow:hidden;opacity:0">
+            </label>
         </div>
         <button type="button" id="ai-analyse-btn" class="btn btn-ai" onclick="analyseWithAI()" style="display:none">
             Analyse with AI

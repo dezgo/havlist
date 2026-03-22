@@ -132,20 +132,5 @@ function deleteItem(itemId) {
     }
 }
 
-// Init — script loads after the form, so DOM is already ready
-(function init() {
-    const btnTake = document.getElementById('btn-take-photo');
-    const btnChoose = document.getElementById('btn-choose-file');
-    const inputCamera = document.getElementById('input-camera');
-    const inputFile = document.getElementById('input-file');
-
-    if (btnTake && inputCamera) {
-        btnTake.addEventListener('click', () => inputCamera.click());
-        inputCamera.addEventListener('change', function () { handlePhotoCapture(this); });
-    }
-    if (btnChoose && inputFile) {
-        btnChoose.addEventListener('click', () => inputFile.click());
-        inputFile.addEventListener('change', function () { handlePhotoCapture(this); });
-    }
-    updateStagedInput();
-})();
+// Init
+updateStagedInput();
