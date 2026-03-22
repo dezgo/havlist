@@ -113,7 +113,8 @@ function goTo(idx) {
     updateSlide(true);
 }
 
-// Touch swipe
+// Touch swipe — use { passive: false } so we can preventDefault
+// to stop the browser's back/forward swipe gesture
 track.addEventListener('touchstart', (e) => {
     touchStartX = e.touches[0].clientX;
     touchDeltaX = 0;
@@ -124,9 +125,10 @@ track.addEventListener('touchstart', (e) => {
 track.addEventListener('touchmove', (e) => {
     if (!isDragging) return;
     touchDeltaX = e.touches[0].clientX - touchStartX;
+    e.preventDefault();
     const offset = -(currentSlide * window.innerWidth) + touchDeltaX;
     track.style.transform = `translateX(${offset}px)`;
-}, { passive: true });
+}, { passive: false });
 
 track.addEventListener('touchend', () => {
     if (!isDragging) return;
