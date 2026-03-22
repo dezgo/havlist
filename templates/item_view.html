@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}{{ item.name or 'Item' }} — HavList{% endblock %}
+
+{% block header_actions %}
+<a href="/item/{{ item.id }}/edit" class="btn btn-secondary">Edit</a>
+{% endblock %}
+
+{% block content %}
+<article class="item-detail">
+    {% if photos %}
+    <div class="photo-gallery">
+        {% for photo in photos %}
+        <img src="/uploads/{{ photo.filename }}" alt="{{ item.name }}" class="gallery-img" loading="lazy">
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <h1>{{ item.name or 'Unnamed item' }}</h1>
+
+    {% if item.description %}
+    <p class="item-description">{{ item.description }}</p>
+    {% endif %}
+
+    <div class="detail-grid">
+        {% if item.category %}
+        <div class="detail-row"><span class="detail-label">Category</span><span>{{ item.category }}</span></div>
+        {% endif %}
+        {% if item.brand %}
+        <div class="detail-row"><span class="detail-label">Brand</span><span>{{ item.brand }}</span></div>
+        {% endif %}
+        {% if item.serial_number %}
+        <div class="detail-row"><span class="detail-label">Serial Number</span><span>{{ item.serial_number }}</span></div>
+        {% endif %}
+        {% if item.purchase_date %}
+        <div class="detail-row"><span class="detail-label">Purchased</span><span>{{ item.purchase_date }}</span></div>
+        {% endif %}
+        {% if item.purchase_location %}
+        <div class="detail-row"><span class="detail-label">Retailer</span><span>{{ item.purchase_location }}</span></div>
+        {% endif %}
+        {% if item.purchase_price %}
+        <div class="detail-row"><span class="detail-label">Price</span><span>${{ "%.2f"|format(item.purchase_price) }}</span></div>
+        {% endif %}
+        {% if item.warranty_info %}
+        <div class="detail-row"><span class="detail-label">Warranty</span><span>{{ item.warranty_info }}</span></div>
+        {% endif %}
+        {% if item.warranty_expiry %}
+        <div class="detail-row"><span class="detail-label">Warranty Expiry</span><span>{{ item.warranty_expiry }}</span></div>
+        {% endif %}
+        {% if item.location %}
+        <div class="detail-row"><span class="detail-label">Location</span><span>{{ item.location }}</span></div>
+        {% endif %}
+        {% if item.condition %}
+        <div class="detail-row"><span class="detail-label">Condition</span><span>{{ item.condition }}</span></div>
+        {% endif %}
+    </div>
+
+    {% if item.notes %}
+    <div class="notes-section">
+        <h3>Notes</h3>
+        <p>{{ item.notes }}</p>
+    </div>
+    {% endif %}
+
+    <p class="item-timestamp">Added {{ item.created_at }}</p>
+</article>
+{% endblock %}

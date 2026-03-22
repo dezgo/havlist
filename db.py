@@ -1,0 +1,66 @@
+import sqlite3
+import os
+
+from flask import g
+
+DATABASE = os.path.join(os.path.dirname(__file__), "havlist.db")
+
+_initialized = False
+
+
+def get_db():
+    if "db" not in g:
+        g.db = sqlite3.connect(DATABASE)
+        g.db.row_factory = sqlite3.Row
+        g.db.execute("PRAGMA journal_mode=WAL")
+        g.db.execute("PRAGMA foreign_keys=ON")
+    return g.db
+
+
+def close_db(e=None):
+    db = g.pop("db", None)
+    if db is not None:
+        db.close()
+
+
+def init_db():
+    global _initialized
+    if _initialized:
+        return
+    db = get_db()
+    db.executescript(
+        """
+        CREATE TABLE IF NOT EXISTS items (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            name            TEXT,
+            description     TEXT,
+            category        TEXT,
+            brand           TEXT,
+            serial_number   TEXT,
+            purchase_date   TEXT,
+            purchase_location TEXT,
+            purchase_price  REAL,
+            warranty_info   TEXT,
+            warranty_expiry TEXT,
+            location        TEXT,
+            condition       TEXT,
+            notes           TEXT,
+            created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS photos (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            item_id     INTEGER NOT NULL,
+            filename    TEXT NOT NULL,
+            created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (item_id) REFERENCES items(id)
+        );
+        """
+    )
+    db.commit()
+    _initialized = True
+
+
+def teardown(app):
+    app.teardown_appcontext(close_db)

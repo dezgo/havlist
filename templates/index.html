@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block header_actions %}
+<a href="/item/new" class="btn btn-primary btn-icon" aria-label="Add item">+</a>
+{% endblock %}
+
+{% block content %}
+<form class="filters" method="get" action="/">
+    <input type="search" name="q" value="{{ search }}" placeholder="Search items..." class="input">
+    <select name="category" class="input">
+        <option value="">All categories</option>
+        {% for c in categories %}
+        <option value="{{ c }}" {% if c == selected_category %}selected{% endif %}>{{ c }}</option>
+        {% endfor %}
+    </select>
+    <select name="location" class="input">
+        <option value="">All locations</option>
+        {% for l in locations %}
+        <option value="{{ l }}" {% if l == selected_location %}selected{% endif %}>{{ l }}</option>
+        {% endfor %}
+    </select>
+    <button type="submit" class="btn btn-secondary">Filter</button>
+</form>
+
+{% if items %}
+<div class="item-grid">
+    {% for item in items %}
+    <a href="/item/{{ item.id }}" class="item-card">
+        <div class="item-card-photo">
+            {% if item.thumbnail %}
+            <img src="/uploads/{{ item.thumbnail }}" alt="{{ item.name }}" loading="lazy">
+            {% else %}
+            <div class="no-photo">No photo</div>
+            {% endif %}
+        </div>
+        <div class="item-card-info">
+            <h3>{{ item.name or 'Unnamed item' }}</h3>
+            {% if item.brand %}<p class="item-meta">{{ item.brand }}</p>{% endif %}
+            {% if item.category %}<span class="tag">{{ item.category }}</span>{% endif %}
+            {% if item.location %}<span class="tag tag-location">{{ item.location }}</span>{% endif %}
+        </div>
+    </a>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <p>No items yet.</p>
+    <a href="/item/new" class="btn btn-primary">Add your first item</a>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% block title %}{{ "Edit" if item else "New" }} Item — HavList{% endblock %}
+
+{% block header_actions %}
+<a href="{{ url_for('view_item', item_id=item.id) if item else url_for('index') }}" class="btn btn-secondary">Cancel</a>
+{% endblock %}
+
+{% block content %}
+<form id="item-form"
+      method="post"
+      action="{{ url_for('update_item', item_id=item.id) if item else url_for('create_item') }}">
+
+    <!-- Photo section -->
+    <section class="form-section">
+        <h2>Photos</h2>
+        <div id="photo-preview" class="photo-grid">
+            {% if item %}
+            {% for photo in photos %}
+            <div class="photo-thumb" data-filename="{{ photo.filename }}" data-photo-id="{{ photo.id }}">
+                <img src="/uploads/{{ photo.filename }}" alt="">
+                <button type="button" class="photo-remove" onclick="removePhoto(this)">&times;</button>
+            </div>
+            {% endfor %}
+            {% endif %}
+        </div>
+        <div class="photo-actions">
+            <label class="btn btn-secondary">
+                Take Photo
+                <input type="file" accept="image/*" capture="environment" hidden
+                       onchange="handlePhotoCapture(this)">
+            </label>
+            <label class="btn btn-secondary">
+                Choose File
+                <input type="file" accept="image/*" multiple hidden
+                       onchange="handlePhotoSelect(this)">
+            </label>
+        </div>
+        <button type="button" id="ai-analyse-btn" class="btn btn-ai" onclick="analyseWithAI()" style="display:none">
+            Analyse with AI
+        </button>
+        <div id="ai-status" class="ai-status"></div>
+        <input type="hidden" name="staged_photos" id="staged-photos" value="">
+    </section>
+
+    <!-- Item details -->
+    <section class="form-section">
+        <h2>Details</h2>
+        <label class="field">
+            <span>Item Name *</span>
+            <input type="text" name="name" class="input" required
+                   value="{{ item.name if item else '' }}" id="f-name">
+        </label>
+        <label class="field">
+            <span>Description</span>
+            <textarea name="description" class="input" rows="2" id="f-description">{{ item.description if item else '' }}</textarea>
+        </label>
+        <label class="field">
+            <span>Category</span>
+            <select name="category" class="input" id="f-category">
+                <option value="">—</option>
+                {% for c in ['Electronics','Furniture','Kitchen','Clothing','Tools','Sports','Books','Toys','Appliances','Decor','Office','Outdoor','Other'] %}
+                <option value="{{ c }}" {% if item and item.category == c %}selected{% endif %}>{{ c }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label class="field">
+            <span>Brand</span>
+            <input type="text" name="brand" class="input"
+                   value="{{ item.brand if item else '' }}" id="f-brand">
+        </label>
+        <label class="field">
+            <span>Serial Number</span>
+            <input type="text" name="serial_number" class="input"
+                   value="{{ item.serial_number if item else '' }}" id="f-serial_number">
+        </label>
+    </section>
+
+    <section class="form-section">
+        <h2>Purchase Info</h2>
+        <label class="field">
+            <span>Purchase Date</span>
+            <input type="date" name="purchase_date" class="input"
+                   value="{{ item.purchase_date if item else '' }}">
+        </label>
+        <label class="field">
+            <span>Retailer / Location</span>
+            <input type="text" name="purchase_location" class="input"
+                   value="{{ item.purchase_location if item else '' }}">
+        </label>
+        <label class="field">
+            <span>Price</span>
+            <input type="number" name="purchase_price" class="input" step="0.01" min="0"
+                   value="{{ item.purchase_price if item else '' }}" id="f-purchase_price">
+        </label>
+    </section>
+
+    <section class="form-section">
+        <h2>Warranty</h2>
+        <label class="field">
+            <span>Warranty Info</span>
+            <input type="text" name="warranty_info" class="input"
+                   value="{{ item.warranty_info if item else '' }}">
+        </label>
+        <label class="field">
+            <span>Warranty Expiry</span>
+            <input type="date" name="warranty_expiry" class="input"
+                   value="{{ item.warranty_expiry if item else '' }}">
+        </label>
+    </section>
+
+    <section class="form-section">
+        <h2>Location &amp; Condition</h2>
+        <label class="field">
+            <span>Location in Home</span>
+            <input type="text" name="location" class="input" placeholder="e.g. Garage, Bedroom"
+                   value="{{ item.location if item else '' }}">
+        </label>
+        <label class="field">
+            <span>Condition</span>
+            <select name="condition" class="input" id="f-condition">
+                <option value="">—</option>
+                {% for c in ['New','Like New','Good','Fair','Poor'] %}
+                <option value="{{ c }}" {% if item and item.condition == c %}selected{% endif %}>{{ c }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label class="field">
+            <span>Notes</span>
+            <textarea name="notes" class="input" rows="3" id="f-notes">{{ item.notes if item else '' }}</textarea>
+        </label>
+    </section>
+
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary btn-large">
+            {{ "Update Item" if item else "Save Item" }}
+        </button>
+        {% if item %}
+        <button type="button" class="btn btn-danger" onclick="deleteItem({{ item.id }})">Delete</button>
+        {% endif %}
+    </div>
+</form>
+
+<script src="/static/form.js"></script>
+{% endblock %}
