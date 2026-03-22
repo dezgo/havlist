@@ -133,16 +133,19 @@ function deleteItem(itemId) {
 }
 
 // Init
-document.getElementById('btn-take-photo').addEventListener('click', () => {
-    document.getElementById('input-camera').click();
+document.addEventListener('DOMContentLoaded', () => {
+    const btnTake = document.getElementById('btn-take-photo');
+    const btnChoose = document.getElementById('btn-choose-file');
+    const inputCamera = document.getElementById('input-camera');
+    const inputFile = document.getElementById('input-file');
+
+    if (btnTake && inputCamera) {
+        btnTake.addEventListener('click', () => inputCamera.click());
+        inputCamera.addEventListener('change', function () { handlePhotoCapture(this); });
+    }
+    if (btnChoose && inputFile) {
+        btnChoose.addEventListener('click', () => inputFile.click());
+        inputFile.addEventListener('change', function () { handlePhotoCapture(this); });
+    }
+    updateStagedInput();
 });
-document.getElementById('btn-choose-file').addEventListener('click', () => {
-    document.getElementById('input-file').click();
-});
-document.getElementById('input-camera').addEventListener('change', function () {
-    handlePhotoCapture(this);
-});
-document.getElementById('input-file').addEventListener('change', function () {
-    handlePhotoCapture(this);
-});
-updateStagedInput();
