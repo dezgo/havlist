@@ -20,6 +20,18 @@ from photos import save_uploaded_photo, delete_photo_file
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-me")
 
+
+@app.context_processor
+def cache_bust():
+    """Add file mtime as cache buster for static assets."""
+    def bust(filename):
+        fpath = os.path.join(app.static_folder, filename)
+        try:
+            return f"/static/{filename}?v={int(os.path.getmtime(fpath))}"
+        except OSError:
+            return f"/static/{filename}"
+    return {"static_bust": bust}
+
 UPLOAD_FOLDER = os.path.join(app.root_path, "uploads")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
