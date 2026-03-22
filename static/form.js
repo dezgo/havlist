@@ -30,13 +30,17 @@ async function uploadFile(file) {
 
 async function handlePhotoCapture(input) {
     if (!input.files.length) return;
+    const status = document.getElementById('ai-status');
     for (const file of input.files) {
         try {
+            status.textContent = 'Uploading...';
             const data = await uploadFile(file);
             stagedPhotos.push(data.filename);
             addPhotoThumb(data.filename, data.url);
+            status.textContent = '';
         } catch (e) {
             console.error(e);
+            status.textContent = 'Upload failed: ' + e.message;
         }
     }
     updateStagedInput();

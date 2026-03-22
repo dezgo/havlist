@@ -18,12 +18,17 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
-    // Network-first for API/dynamic, cache-first for static assets
-    if (e.request.url.includes('/api/') || e.request.url.includes('/uploads/')) {
-        e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
-    } else {
-        e.respondWith(
-            caches.match(e.request).then((cached) => cached || fetch(e.request))
-        );
-    }
+    // Network-first for everything, fall back to cache for offline
+    e.respondWith(
+        fetch(e.request)
+            .then((res) => {
+                // Update cache with fresh response
+                if (res.ok && e.request.method === 'GET') {
+                    const clone = res.clone();
+                    caches.open(CACHE_NAME).then((cache) => cache.put(e.request, clone));
+                }
+                return res;
+            })
+            .catch(() => caches.match(e.request))
+    );
 });
