@@ -10,10 +10,13 @@ from flask import (
     render_template,
     request,
     send_from_directory,
+    session,
     url_for,
 )
+from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
 
+from auth import get_current_user, login_required
 from db import get_db, init_db
 from photos import save_uploaded_photo, delete_photo_file
 
@@ -32,6 +35,12 @@ def cache_bust():
             return f"/static/{filename}"
     return {"static_bust": bust}
 
+
+@app.context_processor
+def inject_user():
+    return {"current_user": get_current_user()}
+
+
 UPLOAD_FOLDER = os.path.join(app.root_path, "uploads")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
@@ -48,20 +57,99 @@ def ensure_db():
     init_db()
 
 
+def _user_id():
+    return session["user_id"]
+
+
+def _owns_item(db, item_id):
+    """Return the item row if owned by current user, else None."""
+    item = db.execute(
+        "SELECT * FROM items WHERE id = ? AND user_id = ?", (item_id, _user_id())
+    ).fetchone()
+    return item
+
+
+# ---------------------------------------------------------------------------
+# Auth
+# ---------------------------------------------------------------------------
+
+
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    if request.method == "POST":
+        email = request.form.get("email", "").strip().lower()
+        password = request.form.get("password", "")
+        name = request.form.get("name", "").strip()
+
+        if not email or not password:
+            flash("Email and password are required.", "error")
+            return render_template("register.html")
+
+        if len(password) < 6:
+            flash("Password must be at least 6 characters.", "error")
+            return render_template("register.html")
+
+        db = get_db()
+        existing = db.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone()
+        if existing:
+            flash("An account with that email already exists.", "error")
+            return render_template("register.html")
+
+        cursor = db.execute(
+            "INSERT INTO users (email, password, name) VALUES (?, ?, ?)",
+            (email, generate_password_hash(password), name or None),
+        )
+        db.commit()
+        session["user_id"] = cursor.lastrowid
+        flash("Account created!", "success")
+        return redirect(url_for("index"))
+
+    return render_template("register.html")
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        email = request.form.get("email", "").strip().lower()
+        password = request.form.get("password", "")
+
+        db = get_db()
+        user = db.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
+
+        if user and check_password_hash(user["password"], password):
+            session["user_id"] = user["id"]
+            flash(f"Welcome back{', ' + user['name'] if user['name'] else ''}!", "success")
+            return redirect(url_for("index"))
+
+        flash("Invalid email or password.", "error")
+        return render_template("login.html")
+
+    return render_template("login.html")
+
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    flash("Logged out.", "success")
+    return redirect(url_for("login"))
+
+
 # ---------------------------------------------------------------------------
 # Pages
 # ---------------------------------------------------------------------------
 
 
 @app.route("/")
+@login_required
 def index():
     db = get_db()
+    uid = _user_id()
     search = request.args.get("q", "").strip()
     category = request.args.get("category", "").strip()
     location = request.args.get("location", "").strip()
 
-    query = "SELECT * FROM items WHERE 1=1"
-    params = []
+    query = "SELECT * FROM items WHERE user_id = ?"
+    params = [uid]
 
     if search:
         query += " AND (name LIKE ? OR description LIKE ? OR brand LIKE ? OR notes LIKE ?)"
@@ -79,10 +167,12 @@ def index():
 
     # Fetch categories and locations for filter dropdowns
     categories = db.execute(
-        "SELECT DISTINCT category FROM items WHERE category IS NOT NULL AND category != '' ORDER BY category"
+        "SELECT DISTINCT category FROM items WHERE user_id = ? AND category IS NOT NULL AND category != '' ORDER BY category",
+        (uid,),
     ).fetchall()
     locations = db.execute(
-        "SELECT DISTINCT location FROM items WHERE location IS NOT NULL AND location != '' ORDER BY location"
+        "SELECT DISTINCT location FROM items WHERE user_id = ? AND location IS NOT NULL AND location != '' ORDER BY location",
+        (uid,),
     ).fetchall()
 
     # Attach first photo to each item for the listing
@@ -110,11 +200,14 @@ def index():
 def _form_options():
     """Fetch distinct locations and categories for form datalists."""
     db = get_db()
+    uid = _user_id()
     locations = db.execute(
-        "SELECT DISTINCT location FROM items WHERE location IS NOT NULL AND location != '' ORDER BY location"
+        "SELECT DISTINCT location FROM items WHERE user_id = ? AND location IS NOT NULL AND location != '' ORDER BY location",
+        (uid,),
     ).fetchall()
     categories = db.execute(
-        "SELECT DISTINCT category FROM items WHERE category IS NOT NULL AND category != '' ORDER BY category"
+        "SELECT DISTINCT category FROM items WHERE user_id = ? AND category IS NOT NULL AND category != '' ORDER BY category",
+        (uid,),
     ).fetchall()
     return {
         "locations": [r["location"] for r in locations],
@@ -123,14 +216,16 @@ def _form_options():
 
 
 @app.route("/item/new")
+@login_required
 def new_item():
     return render_template("item_form.html", item=None, photos=[], **_form_options())
 
 
 @app.route("/item/<int:item_id>")
+@login_required
 def view_item(item_id):
     db = get_db()
-    item = db.execute("SELECT * FROM items WHERE id = ?", (item_id,)).fetchone()
+    item = _owns_item(db, item_id)
     if not item:
         flash("Item not found.", "error")
         return redirect(url_for("index"))
@@ -141,9 +236,10 @@ def view_item(item_id):
 
 
 @app.route("/item/<int:item_id>/edit")
+@login_required
 def edit_item(item_id):
     db = get_db()
-    item = db.execute("SELECT * FROM items WHERE id = ?", (item_id,)).fetchone()
+    item = _owns_item(db, item_id)
     if not item:
         flash("Item not found.", "error")
         return redirect(url_for("index"))
@@ -159,16 +255,18 @@ def edit_item(item_id):
 
 
 @app.route("/api/items", methods=["POST"])
+@login_required
 def create_item():
     data = request.form
     db = get_db()
     cursor = db.execute(
         """INSERT INTO items
-           (name, description, category, brand, serial_number,
+           (user_id, name, description, category, brand, serial_number,
             purchase_date, purchase_location, purchase_price,
             warranty_info, warranty_expiry, location, condition, notes)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (
+            _user_id(),
             data.get("name"),
             data.get("description"),
             data.get("category"),
@@ -204,16 +302,21 @@ def create_item():
 
 
 @app.route("/api/items/<int:item_id>", methods=["POST"])
+@login_required
 def update_item(item_id):
-    data = request.form
     db = get_db()
+    if not _owns_item(db, item_id):
+        flash("Item not found.", "error")
+        return redirect(url_for("index"))
+
+    data = request.form
     db.execute(
         """UPDATE items SET
            name=?, description=?, category=?, brand=?, serial_number=?,
            purchase_date=?, purchase_location=?, purchase_price=?,
            warranty_info=?, warranty_expiry=?, location=?, condition=?, notes=?,
            updated_at=CURRENT_TIMESTAMP
-           WHERE id=?""",
+           WHERE id=? AND user_id=?""",
         (
             data.get("name"),
             data.get("description"),
@@ -229,6 +332,7 @@ def update_item(item_id):
             data.get("condition"),
             data.get("notes"),
             item_id,
+            _user_id(),
         ),
     )
 
@@ -249,15 +353,20 @@ def update_item(item_id):
 
 
 @app.route("/api/items/<int:item_id>/delete", methods=["POST"])
+@login_required
 def delete_item(item_id):
     db = get_db()
+    if not _owns_item(db, item_id):
+        flash("Item not found.", "error")
+        return redirect(url_for("index"))
+
     photos = db.execute(
         "SELECT filename FROM photos WHERE item_id = ?", (item_id,)
     ).fetchall()
     for photo in photos:
         delete_photo_file(app.config["UPLOAD_FOLDER"], photo["filename"])
     db.execute("DELETE FROM photos WHERE item_id = ?", (item_id,))
-    db.execute("DELETE FROM items WHERE id = ?", (item_id,))
+    db.execute("DELETE FROM items WHERE id = ? AND user_id = ?", (item_id, _user_id()))
     db.commit()
     flash("Item deleted.", "success")
     return redirect(url_for("index"))
@@ -269,6 +378,7 @@ def delete_item(item_id):
 
 
 @app.route("/api/photos/upload", methods=["POST"])
+@login_required
 def upload_photo():
     """Upload and compress a photo. Returns the server filename.
     Used during item creation (before item exists) and editing."""
@@ -284,9 +394,16 @@ def upload_photo():
 
 
 @app.route("/api/photos/<int:photo_id>/delete", methods=["POST"])
+@login_required
 def delete_photo(photo_id):
     db = get_db()
-    photo = db.execute("SELECT * FROM photos WHERE id = ?", (photo_id,)).fetchone()
+    # Verify the photo belongs to an item owned by this user
+    photo = db.execute(
+        """SELECT p.* FROM photos p
+           JOIN items i ON p.item_id = i.id
+           WHERE p.id = ? AND i.user_id = ?""",
+        (photo_id, _user_id()),
+    ).fetchone()
     if photo:
         delete_photo_file(app.config["UPLOAD_FOLDER"], photo["filename"])
         db.execute("DELETE FROM photos WHERE id = ?", (photo_id,))
@@ -305,6 +422,7 @@ def uploaded_file(filename):
 
 
 @app.route("/api/ai/analyse", methods=["POST"])
+@login_required
 def ai_analyse():
     """Send one or more photos to the Claude API for item analysis."""
     api_key = os.environ.get("ANTHROPIC_API_KEY")

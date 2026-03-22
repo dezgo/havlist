@@ -30,8 +30,17 @@ def init_db():
     db = get_db()
     db.executescript(
         """
+        CREATE TABLE IF NOT EXISTS users (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            email       TEXT UNIQUE NOT NULL,
+            password    TEXT NOT NULL,
+            name        TEXT,
+            created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
         CREATE TABLE IF NOT EXISTS items (
             id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id         INTEGER NOT NULL DEFAULT 0,
             name            TEXT,
             description     TEXT,
             category        TEXT,
@@ -46,7 +55,8 @@ def init_db():
             condition       TEXT,
             notes           TEXT,
             created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id)
         );
 
         CREATE TABLE IF NOT EXISTS photos (
@@ -58,6 +68,10 @@ def init_db():
         );
         """
     )
+    # Migration: add user_id column if missing (existing DBs)
+    cols = [row[1] for row in db.execute("PRAGMA table_info(items)").fetchall()]
+    if "user_id" not in cols:
+        db.execute("ALTER TABLE items ADD COLUMN user_id INTEGER NOT NULL DEFAULT 0")
     db.commit()
     _initialized = True
 

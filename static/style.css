@@ -39,6 +39,8 @@ header {
     top: 0;
     z-index: 100;
 }
+.header-right { display: flex; align-items: center; gap: 8px; }
+.btn-sm { padding: 6px 10px; font-size: 0.75rem; }
 .logo {
     font-size: 1.25rem;
     font-weight: 700;
@@ -332,6 +334,14 @@ select.input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://ww
     -webkit-user-select: none;
     user-select: none;
 }
+
+/* ── Auth pages ── */
+.auth-page { max-width: 360px; margin: 40px auto; }
+.auth-page h1 { font-size: 1.5rem; margin-bottom: 20px; text-align: center; }
+.auth-form { background: var(--surface); padding: 20px; border-radius: var(--radius); box-shadow: var(--shadow); }
+.auth-form .field { margin-bottom: 14px; }
+.auth-alt { text-align: center; margin-top: 16px; font-size: 0.85rem; color: var(--text-muted); }
+.auth-alt a { color: var(--primary); text-decoration: none; font-weight: 600; }
 
 /* ── Loading spinner ── */
 .spinner {

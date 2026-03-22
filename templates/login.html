@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Log In — HavList{% endblock %}
+
+{% block content %}
+<div class="auth-page">
+    <h1>Log In</h1>
+    <form method="post" action="/login" class="auth-form">
+        <label class="field">
+            <span>Email</span>
+            <input type="email" name="email" class="input" required autocomplete="email">
+        </label>
+        <label class="field">
+            <span>Password</span>
+            <input type="password" name="password" class="input" required autocomplete="current-password">
+        </label>
+        <button type="submit" class="btn btn-primary btn-large">Log In</button>
+    </form>
+    <p class="auth-alt">Don't have an account? <a href="/register">Sign up</a></p>
+</div>
+{% endblock %}

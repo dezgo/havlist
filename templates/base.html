@@ -15,7 +15,12 @@
 <body>
     <header>
         <a href="/" class="logo">HavList</a>
-        {% block header_actions %}{% endblock %}
+        <div class="header-right">
+            {% block header_actions %}{% endblock %}
+            {% if current_user %}
+            <a href="/logout" class="btn btn-secondary btn-sm">Log out</a>
+            {% endif %}
+        </div>
     </header>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
