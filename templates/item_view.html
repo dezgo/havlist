@@ -10,8 +10,21 @@
     {% if photos %}
     <div class="photo-gallery">
         {% for photo in photos %}
-        <img src="/uploads/{{ photo.filename }}" alt="{{ item.name }}" class="gallery-img" loading="lazy">
+        <img src="/uploads/{{ photo.filename }}" alt="{{ item.name }}" class="gallery-img" loading="lazy"
+             onclick="openLightbox({{ loop.index0 }})">
         {% endfor %}
+    </div>
+
+    <div id="lightbox" class="lightbox" onclick="closeLightbox(event)">
+        <button class="lightbox-close" onclick="closeLightbox(event)">&times;</button>
+        <div class="lightbox-counter"><span id="lb-counter"></span></div>
+        <div class="lightbox-track" id="lb-track">
+            {% for photo in photos %}
+            <div class="lightbox-slide">
+                <img src="/uploads/{{ photo.filename }}" alt="{{ item.name }}">
+            </div>
+            {% endfor %}
+        </div>
     </div>
     {% endif %}
 
@@ -63,4 +76,75 @@
 
     <p class="item-timestamp">Added {{ item.created_at }}</p>
 </article>
+
+{% if photos %}
+<script>
+const lightbox = document.getElementById('lightbox');
+const track = document.getElementById('lb-track');
+const counter = document.getElementById('lb-counter');
+const totalSlides = {{ photos|length }};
+let currentSlide = 0;
+let touchStartX = 0;
+let touchDeltaX = 0;
+let isDragging = false;
+
+function openLightbox(idx) {
+    currentSlide = idx;
+    updateSlide(false);
+    lightbox.classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeLightbox(e) {
+    if (e.target === lightbox || e.target.classList.contains('lightbox-close')) {
+        lightbox.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+}
+
+function updateSlide(animate) {
+    track.style.transition = animate ? 'transform 0.25s ease' : 'none';
+    track.style.transform = `translateX(-${currentSlide * 100}%)`;
+    counter.textContent = `${currentSlide + 1} / ${totalSlides}`;
+}
+
+function goTo(idx) {
+    currentSlide = Math.max(0, Math.min(idx, totalSlides - 1));
+    updateSlide(true);
+}
+
+// Touch swipe
+track.addEventListener('touchstart', (e) => {
+    touchStartX = e.touches[0].clientX;
+    touchDeltaX = 0;
+    isDragging = true;
+    track.style.transition = 'none';
+}, { passive: true });
+
+track.addEventListener('touchmove', (e) => {
+    if (!isDragging) return;
+    touchDeltaX = e.touches[0].clientX - touchStartX;
+    const offset = -(currentSlide * window.innerWidth) + touchDeltaX;
+    track.style.transform = `translateX(${offset}px)`;
+}, { passive: true });
+
+track.addEventListener('touchend', () => {
+    if (!isDragging) return;
+    isDragging = false;
+    if (Math.abs(touchDeltaX) > 50) {
+        goTo(currentSlide + (touchDeltaX < 0 ? 1 : -1));
+    } else {
+        updateSlide(true);
+    }
+});
+
+// Keyboard
+document.addEventListener('keydown', (e) => {
+    if (!lightbox.classList.contains('active')) return;
+    if (e.key === 'Escape') { lightbox.classList.remove('active'); document.body.style.overflow = ''; }
+    if (e.key === 'ArrowLeft') goTo(currentSlide - 1);
+    if (e.key === 'ArrowRight') goTo(currentSlide + 1);
+});
+</script>
+{% endif %}
 {% endblock %}
