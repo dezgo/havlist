@@ -260,7 +260,12 @@ select.input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://ww
     background: rgba(0,0,0,0.95);
     overflow: hidden;
 }
-.lightbox.active { display: flex; align-items: center; }
+.lightbox.active {
+    display: flex;
+    align-items: center;
+    touch-action: none;
+    overscroll-behavior: contain;
+}
 .lightbox-close {
     position: absolute;
     top: 12px; right: 12px;
