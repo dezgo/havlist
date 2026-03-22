@@ -113,7 +113,12 @@
         <label class="field">
             <span>Location in Home</span>
             <input type="text" name="location" class="input" placeholder="e.g. Garage, Bedroom"
-                   value="{{ item.location if item else '' }}">
+                   list="location-list" value="{{ item.location if item else '' }}">
+            <datalist id="location-list">
+                {% for loc in locations %}
+                <option value="{{ loc }}">
+                {% endfor %}
+            </datalist>
         </label>
         <label class="field">
             <span>Condition</span>

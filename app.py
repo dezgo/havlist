@@ -107,9 +107,24 @@ def index():
     )
 
 
+def _form_options():
+    """Fetch distinct locations and categories for form datalists."""
+    db = get_db()
+    locations = db.execute(
+        "SELECT DISTINCT location FROM items WHERE location IS NOT NULL AND location != '' ORDER BY location"
+    ).fetchall()
+    categories = db.execute(
+        "SELECT DISTINCT category FROM items WHERE category IS NOT NULL AND category != '' ORDER BY category"
+    ).fetchall()
+    return {
+        "locations": [r["location"] for r in locations],
+        "categories": [r["category"] for r in categories],
+    }
+
+
 @app.route("/item/new")
 def new_item():
-    return render_template("item_form.html", item=None, photos=[])
+    return render_template("item_form.html", item=None, photos=[], **_form_options())
 
 
 @app.route("/item/<int:item_id>")
@@ -135,7 +150,7 @@ def edit_item(item_id):
     photos = db.execute(
         "SELECT * FROM photos WHERE item_id = ? ORDER BY created_at ASC", (item_id,)
     ).fetchall()
-    return render_template("item_form.html", item=item, photos=photos)
+    return render_template("item_form.html", item=item, photos=photos, **_form_options())
 
 
 # ---------------------------------------------------------------------------
