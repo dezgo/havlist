@@ -18,6 +18,8 @@
     <div id="lightbox" class="lightbox" onclick="closeLightbox(event)">
         <button class="lightbox-close" onclick="closeLightbox(event)">&times;</button>
         <div class="lightbox-counter"><span id="lb-counter"></span></div>
+        <button class="lightbox-nav lightbox-prev" id="lb-prev" onclick="goTo(currentSlide-1)">&#8249;</button>
+        <button class="lightbox-nav lightbox-next" id="lb-next" onclick="goTo(currentSlide+1)">&#8250;</button>
         <div class="lightbox-track" id="lb-track">
             {% for photo in photos %}
             <div class="lightbox-slide">
@@ -93,6 +95,7 @@ function openLightbox(idx) {
     updateSlide(false);
     lightbox.classList.add('active');
     document.body.style.overflow = 'hidden';
+    updateNav();
 }
 
 function closeLightbox(e) {
@@ -127,6 +130,12 @@ function updateSlide(animate) {
 function goTo(idx) {
     currentSlide = Math.max(0, Math.min(idx, totalSlides - 1));
     updateSlide(true);
+    updateNav();
+}
+
+function updateNav() {
+    document.getElementById('lb-prev').style.display = currentSlide > 0 ? '' : 'none';
+    document.getElementById('lb-next').style.display = currentSlide < totalSlides - 1 ? '' : 'none';
 }
 
 // Touch swipe — use { passive: false } so we can preventDefault
